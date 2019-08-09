@@ -253,7 +253,7 @@ class Runner(object):
     """
     if not value:
       return value
-    if key == "loss":
+    if key == "loss" or key.startswith("loss:"):
       # This is a special case. This is the total loss.
       # Do not normalize this, as it is also used as-is for the gradient.
       # You can use the `use_normalized_loss` for a flag if you want to have this normalized.
@@ -275,7 +275,8 @@ class Runner(object):
     """
     # See see self._get_fetches_dict() for the keys.
     # keys are e.g. "cost:output", "error:output" or "loss".
-    keys = [k for k in fetches_results.keys() if k.startswith("cost:") or k.startswith("error:") or k == "loss"]
+    keys = [k for k in fetches_results.keys() if k.startswith("cost:") or k.startswith("error:") or
+            k.startswith("loss:") or k == "loss"]
     # step_seq_lens keys are e.g. "data" or "classes".
     step_seq_lens = {
       k[len("size:"):-2]: numpy.sum(v)

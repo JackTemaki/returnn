@@ -954,6 +954,9 @@ class TFNetwork(object):
           d["cost:%s" % loss_name] = reduce_sum(loss.get_loss_value_for_fetch(), name="cost:%s" % loss_name)
         if loss.get_error_value() is not None:
           d["error:%s" % loss_name] = reduce_sum(loss.get_error_value(), name="error:%s" % loss_name)
+        if config.bool("debug_display_loss_per_layer", False):
+          if loss.get_loss_value_for_objective() is not None:
+            d["loss:%s" % loss_name] = reduce_sum(loss.get_loss_value_for_objective(), name="loss:%s" % loss_name)
         d["loss_norm_factor:%s" % loss_name] = inv_reduce_sum(
           loss.get_norm_factor(), name="loss_norm_factor:%s" % loss_name)
       if with_size:

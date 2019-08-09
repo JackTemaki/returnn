@@ -7,6 +7,9 @@ Debugging
 debug_add_check_numerics_on_output
     If set to ``True``, should assert for ``inf`` and ``nan``.
 
+debug_display_loss_per_layer
+    If set to ``True``, shows the unnormalized loss for each layer
+
 debug_print_layer_output_template
     If set to ``True``, print the layer template information during network construction.
 
