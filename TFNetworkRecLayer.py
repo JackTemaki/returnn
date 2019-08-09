@@ -4525,10 +4525,13 @@ class GenericAttentionLayer(AttentionBaseLayer):
     # SoftmaxOverSpatialLayer by default uses time_dim_axis.
     # We also should maybe check that this matches the base time dim axis.
     dyn_axes = weights.get_dynamic_axes()
+
     # for static time-dim
-    if weights.time_dim_axis not in dyn_axes:
+    if not dyn_axes or weights.time_dim_axis not in dyn_axes:
+      assert weights.time_dim_axis is not None and weights.time_dim_axis is not NotSpecified
       return weights.time_dim_axis
     assert dyn_axes, "no dynamic axes in %r" % weights
+
     # Simple case: Only one dynamic axis.
     # Do not do any further checks in this case. The runtime will crash if non-matching and this is simple to identify.
     if len(dyn_axes) == 1:
