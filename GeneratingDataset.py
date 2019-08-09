@@ -2569,7 +2569,7 @@ class OggZipDataset(CachedDataset2):
 
   def __init__(self, path, audio, targets,
                targets_post_process=None,
-               use_cache_manager=False,
+               use_cache_manager=False, segment_file=None,
                fixed_random_seed=None, fixed_random_subset=None,
                epoch_wise_filter=None,
                **kwargs):
@@ -2579,6 +2579,7 @@ class OggZipDataset(CachedDataset2):
     :param dict[str]|None targets: options for :func:`Vocabulary.create_vocab` (e.g. :class:`BytePairEncoding`)
     :param str|list[str]|((str)->str)|None targets_post_process: :func:`get_post_processor_function`, applied on orth
     :param bool use_cache_manager: uses :func:`Util.cf`
+    :param str|None segment_file: an uncompressed segment whitelisting file containing lines corresponding to seq_name
     :param int|None fixed_random_seed: for the shuffling, e.g. for seq_ordering='random'. otherwise epoch will be used
     :param float|int|None fixed_random_subset:
       Value in [0,1] to specify the fraction, or integer >=1 which specifies number of seqs.
@@ -2599,6 +2600,7 @@ class OggZipDataset(CachedDataset2):
       assert ext == ".zip"
       self._zip_file = zipfile.ZipFile(path)
     kwargs.setdefault("name", name)
+    self.segment_file = segment_file
     super(OggZipDataset, self).__init__(**kwargs)
     if use_cache_manager:
       assert self._zip_file is not None, "cache manager only for zip file"
@@ -2652,7 +2654,30 @@ class OggZipDataset(CachedDataset2):
     assert isinstance(first_entry, dict)
     assert isinstance(first_entry["text"], str)
     assert isinstance(first_entry["duration"], float)
-    assert isinstance(first_entry["file"], str)
+
+    # either seq_name or file have to be provided for tags
+    if "seq_name" in first_entry.keys():
+      assert isinstance(first_entry["seq_name"], str)
+    else:
+      assert isinstance(first_entry["file"], str)
+
+    # file has to be provided when using audio feature extraction
+    if self.feature_extractor:
+      assert isinstance(first_entry["file"], str)
+
+    if self.segment_file:
+      segments = set([s.strip() for s in open(self.segment_file)])
+
+      segmented_data = []
+      for entry in data:
+        if "seq_name" not in entry:
+          # use the filename as seq_name if it is not provided
+          entry['seq_name'] = entry['file']
+        if entry['seq_name'] in segments:
+          segmented_data.append(entry)
+
+      return segmented_data
+
     return data
 
   def _filter_fixed_random_subset(self, fixed_random_subset):
