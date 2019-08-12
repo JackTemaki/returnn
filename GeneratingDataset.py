@@ -2567,7 +2567,7 @@ class OggZipDataset(CachedDataset2):
   Generic dataset which reads a Zip file containing Ogg files for each sequence.
   """
 
-  def __init__(self, path, audio, targets,
+  def __init__(self, path, audio, targets=None,
                targets_post_process=None,
                use_cache_manager=False, segment_file=None,
                fixed_random_seed=None, fixed_random_subset=None,
