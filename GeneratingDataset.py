@@ -1019,7 +1019,7 @@ class ExtractAudioFeatures:
     # noinspection PyPackageRequirements
     import soundfile  # pip install pysoundfile
     # integer audio formats are automatically transformed in the range [-1,1]
-    audio, sample_rate = soundfile.read(raw_bytes)
+    audio, sample_rate = soundfile.read(raw_bytes, dtype="float32")
     return self.get_audio_features(audio=audio, sample_rate=sample_rate, seq_name=seq_name)
 
   def get_audio_features(self, audio, sample_rate, seq_name=None):
