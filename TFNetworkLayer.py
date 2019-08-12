@@ -451,6 +451,11 @@ class LayerBase(object):
             # Also, if we are inside a rec layer, and doing search, we also cannot do that.
             if not network.is_inside_rec_layer() or not network.search_flag:
               network.used_data_keys.add(target)
+    # support that the initial_output of any layer inside a recurrent unit can be a layer from base
+    if d.get("initial_output", None):
+      initial_output = d["initial_output"]
+      if isinstance(initial_output, str):
+        d['initial_output'] = get_layer(d['initial_output'])
     if "n_out" not in d and targets and network.eval_flag:
       # Must be done here now because loss might be set to None later.
       target = targets[0]  # guess using first target
@@ -1186,6 +1191,8 @@ class LayerBase(object):
       with tf.name_scope("init_%s_const" % name):
         from TFUtil import constant_with_shape
         return tf.cast(constant_with_shape(v, shape=shape), dtype=data.dtype)
+    if isinstance(v, LayerBase):
+      return v.output.placeholder
     assert isinstance(v, str)
     if v == "zeros":
       return tf.zeros(shape, dtype=data.dtype, name="init_%s_zeros" % name)
