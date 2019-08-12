@@ -2571,7 +2571,7 @@ class OggZipDataset(CachedDataset2):
                targets_post_process=None,
                use_cache_manager=False, segment_file=None,
                fixed_random_seed=None, fixed_random_subset=None,
-               epoch_wise_filter=None,
+               epoch_wise_filter=None, stop_token=None,
                **kwargs):
     """
     :param str|list[str] path: filename to zip
@@ -2634,12 +2634,15 @@ class OggZipDataset(CachedDataset2):
       self.num_outputs["classes"] = [self.targets.num_labels, 1]
     if self.feature_extractor:
       self.num_outputs["data"] = [self.num_inputs, 2]
+    self.num_outputs["sequence_end"] = (1, 2)
     self._data = self._collect_data()
     if fixed_random_subset:
       self._filter_fixed_random_subset(fixed_random_subset)
     self.epoch_wise_filter = EpochWiseFilter(epoch_wise_filter) if epoch_wise_filter else None
     self._seq_order = None  # type: typing.Optional[typing.List[int]]
     self.init_seq_order()
+
+    self.stop_token = stop_token
 
   def _read(self, filename, zip_index):
     """
@@ -2854,15 +2857,36 @@ class OggZipDataset(CachedDataset2):
     seq_tag = self.get_tag(seq_idx)
     if self.feature_extractor:
       with self._open_audio_file(seq_idx) as audio_file:
-        features = self.feature_extractor.get_audio_features_from_raw_bytes(audio_file, seq_name=seq_tag)
+        features = self.feature_extractor.get_audio_features_from_raw_bytes(audio_file)
+        num_frames = features.shape[0]
+        sequence_end = numpy.zeros((num_frames, 1), dtype="float32")
+        if self.stop_token is not None:
+          assert "ramp_len" in self.stop_token.keys()
+          assert "ramp_start_value" in self.stop_token.keys()
+
+          ramp_len = self.stop_token.get("ramp_len")
+          ramp_start = self.stop_token.get("ramp_start_value")
+          for n, i in enumerate(range(-ramp_len, 0)):
+            sequence_end[i] = (1 - ramp_start) * (n / ramp_len) + ramp_start
+        else:
+          sequence_end[-1] = 1
     else:
-      features = numpy.zeros(())  # currently the API requires some dummy values...
-    targets, txt = self._get_transcription(seq_idx)
-    targets = numpy.array(targets, dtype="int32")
-    txt = numpy.array(txt, dtype="object")
+      features = numpy.zeros((1, 1), dtype="float32")  # currently the API requires some dummy values...
+
+    if self.targets:
+      classes, txt = self._get_transcription(seq_idx)
+      classes = numpy.array(classes, dtype="int32")
+      txt = numpy.array(txt, dtype="object")
+      targets = {"classes": classes, "raw": txt}
+    else:
+      targets = {}
+
+    if self.feature_extractor and self.stop_token:
+        targets['sequence_end'] = sequence_end
+
     return DatasetSeq(
       features=features,
-      targets={"classes": targets, "raw": txt},
+      targets=targets,
       seq_idx=seq_idx,
       seq_tag=seq_tag)
 
