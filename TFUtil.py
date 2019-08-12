@@ -3975,7 +3975,8 @@ class CudaEnv(object):
       "-I", "%s/include" % self.cuda_path,
       "-L", "%s/%s" % (self.cuda_path, self._get_lib_dir_name()),
       "-x", "cu",
-      "-v"]
+      "-v",
+      "-DNDEBUG"]
 
   def get_compiler_bin(self):
     """
