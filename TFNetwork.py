@@ -124,7 +124,10 @@ class ExternData(object):
       # some datasets just would return some dummy int value, but ignore if data.dim is None
       assert data.dim == data_dim or data.dim is None, "key %r dim mismatch. %s" % (key, base_err_msg)
       data_shape = tuple(dataset.get_data_shape(key))
-      assert data.shape[1:] == data_shape, "key %r shape mismatch. %s" % (key, base_err_msg)
+      if len(data.shape) == 1 and data.sparse == False:
+        assert data.shape == data_shape
+      else:
+        assert data.shape[1:] == data_shape, "key %r shape mismatch. %s" % (key, base_err_msg)
 
   def register_data_from_dict(self, data):
     """
