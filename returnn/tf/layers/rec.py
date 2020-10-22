@@ -2007,8 +2007,11 @@ class _SubnetworkRecCell(object):
         assert "end" in self.layer_data_templates, "You need to have an 'end' layer in your rec subnet."
         end_template = self.layer_data_templates["end"]
         needed_outputs.add("end")
-        assert tf.as_dtype(end_template.output.dtype) is tf.bool
-        assert end_template.output.batch_shape == (None,)  # (batch*beam,)
+        assert tf.as_dtype(end_template.output.dtype) is tf.bool, (
+          "The 'end' layer output needs to be of type tf.bool")
+        assert end_template.output.batch_shape == (None,), (  # (batch*beam,)
+          "The 'end' layer output needs to have the shape (batch*beam,)"
+          "If you have a remaining feature axis of dimension 1, use a squeeze layer")
       else:
         assert have_known_seq_len, (
           "You need to have an 'end' layer in your rec subnet if the generated seq len is unknown.")
