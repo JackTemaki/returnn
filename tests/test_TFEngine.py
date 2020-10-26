@@ -3612,6 +3612,66 @@ def test_regression_choice():
   engine.finalize()
 
 
+def test_automatic_conv_and_rnn_axes():
+  net_dict = {
+    'conv0': {'L2': 1e-07, 'activation': 'relu', 'class': 'conv', 'filter_size': (5,), 'from': ['data'],
+                    'n_out': 9, 'padding': 'same', 'auto_use_channel_first': True},
+    'lstm0': {'class': 'rec',
+                 'direction': 1,
+                 'from': ['conv0'],
+                 'n_out': 2,
+                 'unit': 'nativelstm2',
+                 },
+    'output': {'class': 'copy', 'from': 'lstm0', 'target': 'data', 'loss': 'mse'}
+  }
+
+  from returnn.datasets.generating import DummyDataset, StaticDataset
+  seq_len = 5
+  n_data_dim = 2
+  n_classes_dim = 3
+  dataset = DummyDataset(input_dim=n_data_dim, output_dim=n_classes_dim, num_seqs=2, seq_len=seq_len)
+  dataset.init_seq_order(epoch=1)
+  search_data = StaticDataset(
+    data=[{'classes': numpy.ones((seq_len,), dtype="int32")}], output_dim={'classes': (n_classes_dim, 1)})
+  search_data.init_seq_order(epoch=1)
+
+  import tempfile
+  output_file = tempfile.mktemp(suffix=".hdf", prefix="nose-tf-forward")
+
+  config = Config()
+  config.update({
+    "model": "%s/model" % _get_tmp_dir(),
+    "batch_size": 100,
+    "max_seqs": 2,
+    "extern_data": {
+      'data': {'dim': n_data_dim, 'shape': (None, n_data_dim), 'available_for_inference': True},
+      'classes': {'dim': n_classes_dim, 'shape': (None,), 'sparse': True, 'available_for_inference': False}},
+    "network": net_dict,
+    "start_epoch": 1,
+    "num_epochs": 2,
+    "learning_rate": 0.01,
+    "adam": True,
+    "debug_print_layer_output_template": True,
+    "debug_print_layer_output_shape": True,
+  })
+
+  _cleanup_old_models(config)
+  engine = Engine(config=config)
+  engine.init_train_from_config(config=config, train_data=dataset, dev_data=dataset, eval_data=None)
+  print("Extern data:")
+  pprint(engine.network.extern_data.data)
+  print("Used data keys:")
+  pprint(engine.network.used_data_keys)
+  engine.train()
+
+  print("Forward...")
+  engine.use_search_flag = True
+  engine.use_eval_flag = False
+  engine.use_dynamic_train_flag = False
+  engine.init_network_from_config(config)
+  engine.forward_to_hdf(data=dataset, output_file=output_file, batch_size=1)
+
+
 if __name__ == "__main__":
   try:
     better_exchook.install()
