@@ -337,6 +337,7 @@ class MetaDataset(CachedDataset2):
     super(MetaDataset, self).init_seq_order(epoch=epoch, seq_list=seq_list, seq_order=seq_order)
 
     if not need_reinit:
+      assert False
       self._num_seqs = len(self.seq_list_ordered[self.default_dataset_key])
       return False
 
